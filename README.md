@@ -32,6 +32,10 @@ Multi-turn dialogues use Temporal Difference learning with Monte Carlo targets (
 
 ## Benchmark: Laya vs. TypeSafe Jev
 
+<div align="center">
+  <img src="eval/benchmark_comparison.png" alt="Laya Benchmark Comparison" width="900" />
+</div>
+
 | Metric / Dimension | TypeSafe Jev (Published) | Laya (Fine-Tuned Checkpoint) | Analysis / Advantage |
 |---|---|---|---|
 | **P50 Latency (1 Question)** | ~400 ms avg (70 to 500 ms, 150 ms best) | **38.4 ms** (p95: 42.1 ms) | **Laya is ~10.4x faster on avg (4x faster than Jev best-case)** |
