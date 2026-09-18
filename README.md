@@ -8,13 +8,13 @@ tags: [laya, rl-agent, system-one, calibrated-decisions, rlcd, classification, r
 
 Laya is an open-source, non-autoregressive System 1 decision model: give it a **state** (text, email, ticket, or JSON document) and **typed questions**, and it returns typed answers with mathematically calibrated probabilities and confidence scores. It never generates text, eliminating parsing errors and hallucinations.
 
-This is the **fine-tuned checkpoint**, incorporating dedicated email triage (spam, phishing, department routing), conversation trajectory modeling ($\text{TD}(\lambda=1.0)$), and per-cardinality temperature calibration.
+This is the **fine-tuned checkpoint**, incorporating dedicated email triage (spam, phishing, department routing), conversation trajectory modeling (TD(lambda = 1.0)), and per-cardinality temperature calibration.
 
 | Question type | Returns |
 |---|---|
 | `choice` | Selected option, probabilities per option, calibrated confidence |
 | `score` | Expected level on your ordinal rubric (0, 1, 2...), distribution, confidence |
-| `noul` | Calibrated boolean probability $P(\text{true}) \in [0.0, 1.0]$ |
+| `noul` | Calibrated boolean probability P(true) from 0.0 to 1.0 |
 
 ## Architecture
 - Backbone: `ModernBERT-large` (395M, fully fine-tuned, bidirectional), plus a decision head trained from scratch (2 transformer layers, an option marker scorer, and an act/escalate head). Total parameters: 421M.
@@ -25,7 +25,7 @@ This is the **fine-tuned checkpoint**, incorporating dedicated email triage (spa
 ## Training
 Trained with **RLCD (Reinforcement Learning for Calibrated Decisions)**: the policy reports a probability distribution, exploration adds zero-mean Gaussian noise to the logits, and the reward is a strictly proper scoring rule (log score + spherical score, plus ranked probability score for ordinal score questions). The maximum expected reward is achieved only when the model outputs true, calibrated probabilities.
 
-Multi-turn dialogues use Temporal Difference learning with Monte Carlo targets ($\text{TD}(\lambda = 1.0)$) over prefix slices, preventing outcome leakage. 100% human-annotated real-world datasets, zero synthetic shortcuts.
+Multi-turn dialogues use Temporal Difference learning with Monte Carlo targets (TD(lambda = 1.0)) over prefix slices, preventing outcome leakage. 100% human-annotated real-world datasets, zero synthetic shortcuts.
 
 - Training: Fine-tuned (7,313 updates, 1 epoch, ~1.96 hours)
 - Fitted calibration temperatures: [1.637, 1.251, 1.983] (with per-option-count scaling)
