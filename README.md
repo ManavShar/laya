@@ -15,7 +15,7 @@ maximise reward. It never generates text, so there is nothing to parse and nothi
 hallucinate.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/laya_vs_jev.png" alt="Laya with routing versus TypeSafe Jev: accuracy, language coverage, speed and calibration" width="100%" />
+  <img src="assets/laya_vs_jev.png" alt="Laya with routing versus TypeSafe Jev: accuracy, language coverage, speed and calibration" width="100%" />
 </p>
 
 **This repo holds all three checkpoints** and is the hub for the family. The English checkpoint
