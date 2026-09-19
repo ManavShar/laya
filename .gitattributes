@@ -37,3 +37,4 @@ eval/benchmark_comparison.png filter=lfs diff=lfs merge=lfs -text
 multilingual/tokenizer/tokenizer.json filter=lfs diff=lfs merge=lfs -text
 assets/laya_vs_jev.png filter=lfs diff=lfs merge=lfs -text
 assets/laya_benchmark.png filter=lfs diff=lfs merge=lfs -text
+assets/laya_benchmark_common.png filter=lfs diff=lfs merge=lfs -text
