@@ -15,7 +15,7 @@ maximise reward. It never generates text, so there is nothing to parse and nothi
 hallucinate.
 
 <p align="center">
-  <img src="assets/laya_vs_jev.png" alt="Laya with routing versus TypeSafe Jev: accuracy, language coverage, speed and calibration" width="100%" />
+  <img src="assets/laya_vs_jev_full.png" alt="Laya versus TypeSafe Jev: accuracy, every application workflow, all 51 languages, speed, calibration and routing cost" width="100%" />
 </p>
 
 **This repo holds all three checkpoints** and is the hub for the family. The English checkpoint
@@ -75,8 +75,16 @@ router.predict({"body": "मुझसे दो बार शुल्क लि
 router.predict(state, questions, model="typed-decisions")           # explicit
 ```
 
-`Router` keeps one checkpoint resident by default (`max_loaded`); raise it for mixed-language
-traffic so it does not reload on every language switch.
+**Preload for a server or a demo.** A cold checkpoint build costs seconds; detection costs
+microseconds. At the default `max_loaded=1`, alternating languages rebuilds a model on every
+request — measured at a 7.4 s median on CPU and 10.3 s on a T4.
+
+```python
+router = Router(preload=True)                # every checkpoint resident, routing is free
+router.attach("english", existing_agent)     # reuse one you already built
+```
+
+On a mixed workload this is worth up to **4.8×** at 50% non-English traffic.
 
 > **If `laya.load()` hangs:** `transformers` probes for TensorFlow at import, and when TF is
 > installed its abseil runtime can deadlock model construction. Run with `USE_TF=0`.
