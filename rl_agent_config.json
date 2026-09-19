@@ -1,5 +1,5 @@
 {
-  "encoder": "/kaggle/input/notebooks/nandukuttan/rl-agent-asset/models/ModernBERT-large",
+  "encoder": "answerdotai/ModernBERT-large",
   "head_layers": 2,
   "max_len": 512,
   "head_max_len": 192,
