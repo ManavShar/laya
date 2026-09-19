@@ -5,7 +5,9 @@ pipeline_tag: text-classification
 tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, scoring, guardrails, moderation, reinforcement-learning, commercial-use]
 ---
 
-# Laya
+<p align="center">
+  <img src="assets/logo-lockup.png" alt="Laya" width="330" />
+</p>
 
 **Multilingual, non-autoregressive System 1 decision model.** Give it a **state** (text, email,
 ticket, or JSON) and **typed questions**; it returns typed answers with probabilities in a
