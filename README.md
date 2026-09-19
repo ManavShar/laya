@@ -7,12 +7,27 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 
 # Laya
 
-Open-source, non-autoregressive **System 1 decision model**. Give it a **state** (text, email,
-ticket, or JSON) and **typed questions**; it returns typed answers with calibrated probabilities
-in a single forward pass. It never generates text, so there is nothing to parse and nothing to
+**Multilingual, non-autoregressive System 1 decision model.** Give it a **state** (text, email,
+ticket, or JSON) and **typed questions**; it returns typed answers with probabilities in a
+single forward pass — 33 ms — across 100+ languages. Trained with reinforcement learning against
+strictly proper scoring rules (**RLCD**), so reporting honest probabilities is the only way to
+maximise reward. It never generates text, so there is nothing to parse and nothing to
 hallucinate.
 
-**This repo holds the English checkpoint** and serves as the hub for the family.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/laya_vs_jev.png" alt="Laya with routing versus TypeSafe Jev: accuracy, language coverage, speed and calibration" width="100%" />
+</p>
+
+**This repo holds all three checkpoints** and is the hub for the family. The English checkpoint
+is at the repo root; the other two are subfolders, and only the one you ask for is downloaded:
+
+```python
+import laya
+
+laya.load("convaiinnovations/laya")                            # English
+laya.load("convaiinnovations/laya", subfolder="multilingual")  # 100+ languages
+laya.load("convaiinnovations/laya", subfolder="typed-decisions")
+```
 
 | checkpoint | encoder | params | context | use it for |
 |---|---|---|---|---|
@@ -105,19 +120,27 @@ Measured on a Tesla T4; every checkpoint answered byte-identical questions in th
 [nibzard](https://github.com/nibzard/decision-model-benchmark)), so Laya answers a single
 question roughly **6–7× faster**.
 
-### Against Jev
+### Laya (with routing) vs Jev
 
-Jev figures are **published by third parties, not measured here** — no TypeSafe API access.
-Sample sizes and prompts differ; treat as indicative, not a controlled head-to-head.
+Every Laya figure is what `Router().predict(...)` returns — the checkpoint the router selects
+for that input. Jev figures are **third-party published, never measured here** (no TypeSafe API
+access); sample sizes and prompts differ.
 
-| dataset | Jev | Laya | |
+| | Jev 1.13.0 | Laya (routed) | |
 |---|---|---|---|
-| **typed-decisions** (2,000 decisions) | 0.727 | **0.766** | `laya-typed-decisions` |
-| AG News (4 labels) | 0.910 | **0.950** | `laya` |
-| DAIR Emotion (6) | 0.480 · Brier 0.846 · NLL 5.588 | **0.595** | `laya`, held out |
-| ECE | 0.246 | **0.081** | after temperature fitting |
+| typed-decisions, 2,000 decisions | 0.727 | **0.766** | +0.039 |
+| AG News, 4 labels | 0.910 | **0.950** | +0.040 |
+| DAIR Emotion, 6 labels | 0.480 | **0.595** | +0.115 |
+| ECE *(lower better)* | 0.246 | **0.081** | 3× better |
+| p50 latency, 1 question | 236–276 ms | **32.8 ms** | 7.8× faster |
+| Languages usable | *no published benchmark* | **45 of 51** | — |
+| Weights | closed API | **Apache 2.0** | — |
+| Cost | $0.042 / 1M tokens | **$0 self-hosted** | — |
 
 On DAIR Emotion, Jev assigned zero probability to the true label on 16% of examples.
+
+Full detail — every workflow, all 51 languages:
+[BENCHMARKS.md](https://github.com/NandhaKishorM/laya/blob/main/BENCHMARKS.md)
 
 ### typed-decisions, all three checkpoints
 
