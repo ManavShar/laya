@@ -110,14 +110,36 @@ question roughly **6–7× faster**.
 Jev figures are **published by third parties, not measured here** — no TypeSafe API access.
 Sample sizes and prompts differ; treat as indicative, not a controlled head-to-head.
 
-| dataset | Jev | Laya |
-|---|---|---|
-| AG News (4 labels) | 0.910 | **0.947** |
-| DAIR Emotion (6) | 0.480 · Brier 0.846 · NLL 5.588 | **0.573** |
-| typed-decisions (2,000 decisions) | 0.727 | **0.766** (fine-tuned checkpoint) |
-| ECE | 0.246 | **0.081** (after temperature fitting) |
+| dataset | Jev | Laya | |
+|---|---|---|---|
+| **typed-decisions** (2,000 decisions) | 0.727 | **0.766** | `laya-typed-decisions` |
+| AG News (4 labels) | 0.910 | **0.950** | `laya` |
+| DAIR Emotion (6) | 0.480 · Brier 0.846 · NLL 5.588 | **0.595** | `laya`, held out |
+| ECE | 0.246 | **0.081** | after temperature fitting |
 
 On DAIR Emotion, Jev assigned zero probability to the true label on 16% of examples.
+
+### typed-decisions, all three checkpoints
+
+400 cases, 2,000 decisions, four workflows — measured here.
+
+| model | accuracy | soft acc | Brier | ECE | score MAE |
+|---|---|---|---|---|---|
+| **`laya-typed-decisions`** | **0.766** | 0.471 | **0.062** | 0.213 | **0.242** |
+| `laya` | 0.362 | 0.332 | 0.316 | 0.175 | 0.694 |
+| `laya-multilingual` | 0.342 | 0.326 | 0.439 | 0.285 | 0.687 |
+| *Jev 1.13.0 (published)* | *0.727* | *0.580* | *0.148* | *0.144* | *0.391* |
+| *teacher ceiling* | *0.735* | | | | |
+| *majority class* | *0.461* | | | | |
+
+The fine-tuned checkpoint clears the teacher ceiling and wins all four workflows: invoice
+processing 0.804, security incidents 0.766, customer service 0.764, agent-trace observability
+0.730. By primitive: `noul` 0.857, `choice` 0.733, `score` 0.723.
+
+The base checkpoints sit below the majority-class baseline here — the capability on this
+benchmark comes from fine-tuning, which is what the
+[fine-tuning notebook](https://github.com/NandhaKishorM/laya/blob/main/notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb)
+is for.
 
 ### English tasks
 
@@ -151,6 +173,9 @@ before the forward pass — that is what `Router` is for.
   0.318 random and 0.461 majority-class baseline. The 0.766 belongs to the checkpoint fine-tuned
   on that benchmark's own training split. Laya is a fast base to specialise, not a zero-shot
   decision engine.
+- **Keep `choice` questions under ~20 options.** Options share a fixed `head_max_len` budget
+  (192 tokens here), so a very large label space leaves only a few tokens per label and
+  accuracy falls off sharply. Split into a coarse choice then a fine one.
 - Ordinal `score` questions are the weakest primitive (SST-5 0.372).
 - Ships over-confident: refitting one temperature per (question type, option count) moves mean
   ECE **0.466 → 0.081**. Do this on your own data before trusting the probabilities.
