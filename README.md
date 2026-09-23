@@ -21,6 +21,16 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 | [`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual) | mmBERT-base | 322M | 1024 (up to 8k) | 100+ languages, ~2.2x faster |
 | [`convaiinnovations/laya-typed-decisions`](https://huggingface.co/convaiinnovations/laya-typed-decisions) | ModernBERT-large | 421M | 1024 | the four typed-decisions workflows (0.766 acc) |
 
+## What's new in laya 0.3.7
+
+`pip install -U laya` for all of this. The checkpoints themselves are unchanged.
+
+* **About 10x faster loading.** Checkpoints are built without the throwaway random weight initialisation, so `laya.load()` drops from about 22 s to about 2 s on CPU, with bit-identical answers. This also skips the pass that crashed on Windows with Python 3.14.
+* **Better routing for non-English Latin text.** Plain-ASCII Spanish, Italian, Portuguese and French (accents stripped by mail clients and ticket systems) and Brazilian Portuguese support text now reach the multilingual checkpoint. On MASSIVE with accents stripped, Italian utterances of six or more words routed correctly went from 39% to 80%. Scripts the router has no range for no longer fall through to English, and URLs, e-mail addresses and dotted names no longer count as words. Checked on 20,000 English texts, with no English prose moved.
+* **A Jev-compatible HTTP server:** `pip install "laya[serve]"`, then `laya-serve`. See [Self-hosting](#self-hosting-jev-compatible-http-server).
+* **Router defaults and hooks.** `Router()` now keeps two checkpoints resident, you can pass your own language guess with `lang_guess=`, and `Router`/`Agent` work as context managers.
+* **Clearer errors.** A malformed question is rejected with a message naming the question and what to fix, and an empty question set returns an empty answer.
+
 ---
 
 ## Quickstart: Route Mode (Recommended)
@@ -111,9 +121,18 @@ On a shared benchmark (17,416 questions, one T4 GPU, identical questions per mod
 
 The English checkpoint collapses on non-Latin scripts (Khmer scores **0.000 accuracy at 0.952 confidence**). Because the model stays confident while being wrong, confidence gating cannot save you. `Router` detects the script in <0.5 ms pure Python before the forward pass.
 
+### Supplying your own language detection
+
+If you already run a language-identification model, pass its answer instead of relying on the built-in heuristic. `lang_guess` takes a language code or a callable, is checked after an explicit `lang=` and before detection, and a callable that returns `None` falls through to detection:
+
+```python
+router.predict(state, questions, lang_guess="ro")              # a code you already know
+router = Router(preload=True, lang_guess=my_lid)               # or install one for every request
+```
+
 ### Production Preload & Memory
 
-A cold checkpoint build costs seconds; language detection costs microseconds. At the default `max_loaded=1`, traffic that alternates languages rebuilds a model on *every* request (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
+A cold checkpoint build costs seconds; language detection costs microseconds. Since 0.3.7 the lazy default keeps **two** checkpoints resident (`english` and `multilingual`, the only two automatic routing chooses between), so after each language's first load a switch costs detection only. A single-language deployment never builds the second. `max_loaded=1` rebuilds on every switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
 
 For a server or a demo, preload:
 
@@ -128,14 +147,19 @@ router.preload(["english", "multilingual"])
 # If your app already built an agent, attach it to avoid duplicate VRAM:
 router.attach("english", existing_agent)
 
-# Manage resident memory (default keeps 1 hot, LRU eviction)
-router = Router(max_loaded=2)       # keep two hot
+# Manage resident memory (default keeps two hot: english + multilingual, LRU eviction)
+router = Router(max_loaded=3)       # all three hot, e.g. with auto_task_detection
+router = Router(max_loaded=1)       # memory-constrained host, reloads on every switch
 router.unload()                     # free memory
+
+with Router() as r:                 # releases the models when the block ends
+    r.predict(state, questions)
 ```
 
 | Deployment Mode | Per-Request Latency | Model Reloads |
 |---|---|---|
-| `Router()` (lazy, `max_loaded=1`) | 7 to 10 s on every language switch | 1 per switch |
+| `Router()` (lazy, `max_loaded=2`) | detection only (<1 ms) after each language's first load | 1 the first time a language appears |
+| `Router(max_loaded=1)` | 7 to 10 s on every language switch | 1 per switch |
 | `Router(preload=True)` | **32.8 ms (GPU) / 193–464 ms (CPU)** | **none** |
 
 ---
@@ -163,6 +187,26 @@ print("Churn Risk :", answers["churn_risk"]["noul"])       # -> 0.892 (89.2% pro
 
 > **If `laya.load()` hangs:** `transformers` probes for TensorFlow at import, and when TF is
 > installed its abseil runtime can deadlock model construction. Run with `USE_TF=0`.
+
+---
+
+## Self-hosting: Jev-compatible HTTP server
+
+`laya-serve` exposes the `Router` on the same `POST /v1/systemone` request and response shape as TypeSafe Jev, so existing TypeSafe clients work by changing their base URL:
+
+```bash
+pip install "laya[serve]"
+LAYA_DEVICE=cuda LAYA_PRELOAD=1 laya-serve        # 0.0.0.0:8000, preloads the checkpoints
+```
+
+```bash
+curl -s localhost:8000/v1/systemone -H 'Content-Type: application/json' -d '{
+  "state": {"document": "I was charged twice. Please fix this ASAP."},
+  "questions": {"billing": {"type": "noul", "instructions": "Is this ticket about billing?"}}
+}'
+```
+
+It accepts every question shape the Jev API does (for example `criteria` as a list), ignores unknown fields, and returns a 422 naming the problem for a malformed question. It binds `0.0.0.0` with no authentication unless `LAYA_API_KEY` is set, in which case it requires `Authorization: Bearer <key>`.
 
 ---
 
@@ -251,6 +295,13 @@ The base checkpoints sit below the majority-class baseline here — the capabili
   1. Raise `agent.cfg["head_max_len"] = 512` and `agent.cfg["max_len"] = 1024` (or up to 2048 / 4096 / 8192) so every option has enough tokens to remain distinct.
   2. Or split large option sets into a two-step coarse-to-fine hierarchical choice.
 - **Ordinal `score` questions are the weakest primitive** (SST-5 0.372).
+- **`noul` can follow its option labels instead of the state, most strongly on this English checkpoint.** `noul` renders its two options as `false:` / `true:`, and here that label pair can dominate the answer, returning a confident "no" for clearly positive input ([#156](https://github.com/NandhaKishorM/laya/issues/156)). Check `noul` answers on your own data. If they look stuck, ask the same question as a two-option `choice` with neutral keys and your yes/no wording as the descriptions:
+
+  ```python
+  {"type": "choice", "instructions": "Is this review positive?",
+   "criteria": {"A": "yes, the review is positive", "B": "no, the review is negative"}}
+  ```
+- **`action.act_probability` carries no usable signal yet** ([#185](https://github.com/NandhaKishorM/laya/issues/185)). It reads 1.0 for almost every input, and its raw logits run against correctness (AUROC 0.30 on 396 labelled decisions). Gate on `confidence` instead, which reaches an AUROC of 0.77 on the same items.
 - **Ships over-confident:** Refitting one temperature per (question type, option count) moves mean ECE **0.466 → 0.081** (`laya`) and **0.314 → 0.106** (`laya-multilingual`). Do this on your own data before trusting the probabilities.
 - **English only on root:** Use `laya-multilingual` for anything outside English.
 
