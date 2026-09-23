@@ -21,15 +21,21 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 | [`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual) | mmBERT-base | 322M | 1024 (up to 8k) | 100+ languages, ~2.2x faster |
 | [`convaiinnovations/laya-typed-decisions`](https://huggingface.co/convaiinnovations/laya-typed-decisions) | ModernBERT-large | 421M | 1024 | the four typed-decisions workflows (0.766 acc) |
 
-## What's new in laya 0.3.7
+## What's new in laya 0.3.11
 
-`pip install -U laya` for all of this. The checkpoints themselves are unchanged.
+`pip install -U laya` for all of this; everything below is new since 0.3.6. The checkpoints themselves are unchanged.
 
 * **About 10x faster loading.** Checkpoints are built without the throwaway random weight initialisation, so `laya.load()` drops from about 22 s to about 2 s on CPU, with bit-identical answers. This also skips the pass that crashed on Windows with Python 3.14.
-* **Better routing for non-English Latin text.** Plain-ASCII Spanish, Italian, Portuguese and French (accents stripped by mail clients and ticket systems) and Brazilian Portuguese support text now reach the multilingual checkpoint. On MASSIVE with accents stripped, Italian utterances of six or more words routed correctly went from 39% to 80%. Scripts the router has no range for no longer fall through to English, and URLs, e-mail addresses and dotted names no longer count as words. Checked on 20,000 English texts, with no English prose moved.
-* **A Jev-compatible HTTP server:** `pip install "laya[serve]"`, then `laya-serve`. See [Self-hosting](#self-hosting-jev-compatible-http-server).
-* **Router defaults and hooks.** `Router()` now keeps two checkpoints resident, you can pass your own language guess with `lang_guess=`, and `Router`/`Agent` work as context managers.
-* **Clearer errors.** A malformed question is rejected with a message naming the question and what to fix, and an empty question set returns an empty answer.
+* **`import laya` no longer loads torch.** Routing, language detection and e-mail cleaning work in lightweight processes.
+* **Batch scoring.** `agent.predict_batch(states, questions)` scores many states in shared forward passes, with answers identical to calling `predict` one state at a time.
+* **Routed batches.** `Router.predict_batch(requests)` routes each request, groups them by checkpoint and question set, and scores each group in shared forward passes, with answers identical to one `predict` call per request.
+* **Prediction hooks.** Opt-in hooks run around every decision, to audit, trace, redact, cache or gate results. With no hooks set, answers are unchanged.
+* **transformers 4.x and Apple GPUs.** Checkpoints load with the right RoPE settings on transformers 4.x, and `predict()` no longer crashes on MPS builds without an autocast backend.
+* **Faster paths, all opt-in.** `laya.load(..., fast=True)` uses a TileLang GPU fast path that matches the stock bf16 forward within rounding. `Agent(compile=True)` enables `torch.compile`, and `laya.onnx_agent.ONNXAgent` runs an exported model on ONNX Runtime.
+* **Run it your way, locally.** A self-hosted Jev-compatible HTTP server (`pip install "laya[serve]"`, then `laya-serve`, see [Self-hosting](#self-hosting-jev-compatible-http-server)), a `laya` command for quick local tests, an optional MCP server (`pip install "laya[mcp]"`), LangChain and LangGraph integrations (`pip install "laya[langchain]"`), and [`laya-ts`](https://github.com/NandhaKishorM/laya/tree/main/laya-ts), a TypeScript package for Node and the browser that gives the same answers as the Python package.
+* **Better routing.** Plain-ASCII Spanish, Italian, Portuguese, French and German, Brazilian Portuguese support text, CJK text with Latin brand names, romanized Bangla and Azerbaijani now reach the multilingual checkpoint. Checked on 20,000 English texts: at most 5 English sentences move, all quoting long native-script names.
+* **Router defaults and hooks.** `Router()` keeps two checkpoints resident, you can pass your own language guess with `lang_guess=`, and `Router`/`Agent` work as context managers.
+* **Correctness and clearer errors.** Long conversation lists keep the newest turn when truncated, non-ASCII instructions reach the model as text, and a malformed question is rejected with a message naming the question and what to fix. A `noul` `criteria` dict keyed anything other than `true`/`false` is rejected rather than silently replaced; use `labels` to change the wording.
 
 ---
 
@@ -132,7 +138,7 @@ router = Router(preload=True, lang_guess=my_lid)               # or install one 
 
 ### Production Preload & Memory
 
-A cold checkpoint build costs seconds; language detection costs microseconds. Since 0.3.7 the lazy default keeps **two** checkpoints resident (`english` and `multilingual`, the only two automatic routing chooses between), so after each language's first load a switch costs detection only. A single-language deployment never builds the second. `max_loaded=1` rebuilds on every switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
+A cold checkpoint build costs seconds; language detection costs microseconds. Since laya 0.3.11 the lazy default keeps **two** checkpoints resident (`english` and `multilingual`, the only two automatic routing chooses between), so after each language's first load a switch costs detection only. A single-language deployment never builds the second. `max_loaded=1` rebuilds on every switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
 
 For a server or a demo, preload:
 
