@@ -19,6 +19,14 @@ Python 3.10 or newer. Optional extras: `laya[serve]` (HTTP server), `laya[mcp]` 
 
 ## Quickstart
 
+> **Long documents: `laya-multilingual` reads up to 8,192 tokens.** It ships with a 1,024-token limit; raise it per call:
+>
+> ```python
+> result = router.predict(long_document, questions, model="multilingual", max_len=8192)
+> ```
+>
+> **Accuracy does not drop.** Short inputs give identical answers at either limit. On long inputs it improves: with the request placed after about 6,300 tokens of other text, 8 of 10 test requests were answered correctly at 8,192, against 3 of 10 at the default limit, which cuts the request off. **Speed:** short inputs run at the same speed, because the cost follows the input's real length, not the limit. Long inputs take longer in proportion to their length: a 6,300-token input took 2.5 s instead of 0.18 s on an Apple GPU (8 s instead of 0.35 s on CPU). Name the checkpoint with `model="multilingual"`, since long mostly-English text would otherwise route to the English checkpoint.
+
 ```python
 from laya import Router
 
@@ -62,9 +70,11 @@ The shipped checkpoints work zero-shot, but fine-tuning on decisions from your o
 
 **[nandhakishorm.github.io/laya](https://nandhakishorm.github.io/laya/)**: guides for [prediction hooks](https://nandhakishorm.github.io/laya/hooks/), [schema-driven decisions](https://nandhakishorm.github.io/laya/structured/), [Docker](https://nandhakishorm.github.io/laya/docker/) and [LangChain and LangGraph](https://nandhakishorm.github.io/laya/langchain/), plus a full [API reference](https://nandhakishorm.github.io/laya/reference/).
 
-## What's new in laya 0.3.17
+## What's new in laya 0.3.18
 
 The checkpoints themselves are unchanged. `pip install -U laya` for the latest runtime fixes:
+
+* **Long documents on `laya-multilingual`:** read up to 8,192 tokens with `max_len=8192` (see the Quickstart).
 
 * **Sturdier fast path.** After a CUDA out-of-memory error the fallback to CPU switches the TileLang fast path off first, a single-option `choice` no longer crashes it, and concurrent calls can no longer overwrite each other's CUDA-graph buffers.
 * **Server and runtime.** `laya-serve` drains its inference pool on shutdown and returns 401 for a malformed bearer header, and `ONNXAgent` matches `Agent` on empty question sets and long conversation lists.
