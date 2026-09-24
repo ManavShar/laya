@@ -17,23 +17,21 @@ pip install laya
 
 Python 3.10 or newer. Optional extras: `laya[serve]` (HTTP server), `laya[mcp]` (MCP server), `laya[langchain]` (LangChain and LangGraph), `laya[onnx]` (ONNX Runtime), `laya[fast]` (TileLang GPU fast path). Platform-by-platform setup is in the [GitHub README](https://github.com/NandhaKishorM/laya#installation-details).
 
-**Long documents.** `laya-multilingual` accepts up to 8,192 tokens with `max_len`. Measured accuracy and time by document length ([benchmark script](https://github.com/NandhaKishorM/laya/blob/main/research/scripts/bench_long_context.py)):
+**Long documents.** `laya-multilingual` reads up to 8,192 tokens with `max_len=8192`. Measured accuracy and time by document length ([benchmark script](https://github.com/NandhaKishorM/laya/blob/main/research/scripts/bench_long_context.py)):
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/long_context_table.png" alt="laya-multilingual long-document accuracy by document length" width="100%" />
+  <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/long_context_8192.png" alt="laya-multilingual long-document accuracy by document length" width="100%" />
 </p>
 
 ## Quickstart
 
-> **Long documents: `laya-multilingual` accepts up to 8,192 tokens and is reliable up to about 4,000.** It ships with a 1,024-token limit, which cuts a long document off; raise it per call:
+> **Long documents: `laya-multilingual` reads up to 8,192 tokens.** It ships with a 1,024-token limit that cuts long documents off, so pass `max_len=8192` for them:
 >
 > ```python
-> result = router.predict(long_document, questions, model="multilingual", max_len=4096)
+> result = router.predict(long_document, questions, model="multilingual", max_len=8192)
 > ```
 >
-> With the request placed after 2,000 to 4,000 tokens of other text, 17 to 18 of 20 requests were answered correctly at the higher limit, against 7 of 20 at the default. Beyond about 4,000 tokens results become unstable (8 to 17 of 20), probably because the checkpoint was trained with its 1,024-token limit, so treat `max_len=8192` as experimental. Short inputs give identical answers at any limit. Speed follows the input's real length, not the limit: short inputs are unchanged, and a 4,000-token input takes about 1.7 s on an Apple GPU.
->
-> Name the checkpoint with `model="multilingual"`, since long mostly-English text would otherwise route to the English checkpoint.
+> In the table above, 16 to 18 of 20 requests were answered correctly with up to about 4,000 tokens of text before them; beyond that results vary (8 to 17 of 20), so check long-document accuracy on your own data. Short inputs give identical answers with `max_len=8192`, and speed follows the input's real length, not the limit: short inputs are unchanged, and a 4,000-token input takes about 1.7 s on an Apple GPU. Name the checkpoint with `model="multilingual"`, since long mostly-English text would otherwise route to the English checkpoint.
 
 ```python
 from laya import Router
@@ -78,11 +76,11 @@ The shipped checkpoints work zero-shot, but fine-tuning on decisions from your o
 
 **[nandhakishorm.github.io/laya](https://nandhakishorm.github.io/laya/)**: guides for [prediction hooks](https://nandhakishorm.github.io/laya/hooks/), [schema-driven decisions](https://nandhakishorm.github.io/laya/structured/), [Docker](https://nandhakishorm.github.io/laya/docker/) and [LangChain and LangGraph](https://nandhakishorm.github.io/laya/langchain/), plus a full [API reference](https://nandhakishorm.github.io/laya/reference/).
 
-## What's new in laya 0.3.19
+## What's new in laya 0.3.20
 
 The checkpoints themselves are unchanged. `pip install -U laya` for the latest runtime fixes:
 
-* **Measured long-document table** for `laya-multilingual`: reliable up to about 4,000 tokens with a higher `max_len`, experimental beyond that.
+* **Long documents with `max_len=8192`** on `laya-multilingual`: a measured table shows accuracy and time by document length.
 
 * **Sturdier fast path.** After a CUDA out-of-memory error the fallback to CPU switches the TileLang fast path off first, a single-option `choice` no longer crashes it, and concurrent calls can no longer overwrite each other's CUDA-graph buffers.
 * **Server and runtime.** `laya-serve` drains its inference pool on shutdown and returns 401 for a malformed bearer header, and `ONNXAgent` matches `Agent` on empty question sets and long conversation lists.
