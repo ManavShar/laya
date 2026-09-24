@@ -21,7 +21,7 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 | [`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual) | mmBERT-base | 322M | 1024 (up to 8k) | 100+ languages, ~2.2x faster |
 | [`convaiinnovations/laya-typed-decisions`](https://huggingface.co/convaiinnovations/laya-typed-decisions) | ModernBERT-large | 421M | 1024 | the four typed-decisions workflows (0.766 acc) |
 
-## What's new in laya 0.3.12
+## What's new in laya 0.3.13
 
 `pip install -U laya` for all of this; everything below is new since 0.3.6. The checkpoints themselves are unchanged.
 
@@ -32,6 +32,7 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 * **Prediction hooks.** Opt-in hooks run around every decision, to audit, trace, redact, cache or gate results. With no hooks set, answers are unchanged.
 * **Schema-driven decisions.** `agent.decide(state, schema=...)` takes a JSON schema or pydantic model and returns typed values in one forward pass.
 * **Per-language calibration.** `lang_temperatures=` applies your own per-language temperatures, and every answer also reports `answer_confidence` (`max(p)`) next to the unchanged `confidence`.
+* **Sturdier fast path.** On a CUDA out-of-memory error the fast path switches off before falling back to CPU, and single-option `choice` questions work.
 * **transformers 4.x and Apple GPUs.** Checkpoints load with the right RoPE settings on transformers 4.x, and `predict()` no longer crashes on MPS builds without an autocast backend.
 * **Faster paths, all opt-in.** `laya.load(..., fast=True)` uses a TileLang GPU fast path that matches the stock bf16 forward within rounding. `Agent(compile=True)` enables `torch.compile`, and `laya.onnx_agent.ONNXAgent` runs an exported model on ONNX Runtime.
 * **Run it your way, locally.** A self-hosted Jev-compatible HTTP server (`pip install "laya[serve]"`, then `laya-serve`, see [Self-hosting](#self-hosting-jev-compatible-http-server)), a `laya` command for quick local tests, an optional MCP server (`pip install "laya[mcp]"`), LangChain and LangGraph integrations (`pip install "laya[langchain]"`), and [`laya-ts`](https://github.com/NandhaKishorM/laya/tree/main/laya-ts), a TypeScript package for Node and the browser that gives the same answers as the Python package.
@@ -140,7 +141,7 @@ router = Router(preload=True, lang_guess=my_lid)               # or install one 
 
 ### Production Preload & Memory
 
-A cold checkpoint build costs seconds; language detection costs microseconds. Since laya 0.3.12 the lazy default keeps **two** checkpoints resident (`english` and `multilingual`, the only two automatic routing chooses between), so after each language's first load a switch costs detection only. A single-language deployment never builds the second. `max_loaded=1` rebuilds on every switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
+A cold checkpoint build costs seconds; language detection costs microseconds. Since laya 0.3.13 the lazy default keeps **two** checkpoints resident (`english` and `multilingual`, the only two automatic routing chooses between), so after each language's first load a switch costs detection only. A single-language deployment never builds the second. `max_loaded=1` rebuilds on every switch (measured at a 7.4 s median reload on CPU and 10.3 s on T4).
 
 For a server or a demo, preload:
 
