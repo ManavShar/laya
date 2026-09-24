@@ -9,6 +9,27 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 
 **Multilingual, non-autoregressive System 1 decision model.** Give it a **state** (text, email, ticket, or JSON) and **typed questions**; it returns typed answers with mathematically calibrated probabilities in a single forward pass (~33 ms) across 100+ languages. Trained with reinforcement learning against strictly proper scoring rules (**RLCD**), so reporting honest probabilities is the only way to maximise reward. It never generates text, so there is nothing to parse and nothing to hallucinate.
 
+## Installation
+
+```bash
+pip install laya
+```
+
+Python 3.10 or newer. Optional extras: `laya[serve]` (HTTP server), `laya[mcp]` (MCP server), `laya[langchain]` (LangChain and LangGraph), `laya[onnx]` (ONNX Runtime), `laya[fast]` (TileLang GPU fast path). Platform-by-platform setup is in the [GitHub README](https://github.com/NandhaKishorM/laya#installation-details).
+
+## Documentation
+
+**[nandhakishorm.github.io/laya](https://nandhakishorm.github.io/laya/)**: guides for [prediction hooks](https://nandhakishorm.github.io/laya/hooks/), [schema-driven decisions](https://nandhakishorm.github.io/laya/structured/), [Docker](https://nandhakishorm.github.io/laya/docker/) and [LangChain and LangGraph](https://nandhakishorm.github.io/laya/langchain/), plus a full [API reference](https://nandhakishorm.github.io/laya/reference/).
+
+## What's new in laya 0.3.15
+
+The checkpoints themselves are unchanged. `pip install -U laya` for the latest runtime fixes:
+
+* **Sturdier fast path.** After a CUDA out-of-memory error the fallback to CPU switches the TileLang fast path off first, a single-option `choice` no longer crashes it, and concurrent calls can no longer overwrite each other's CUDA-graph buffers.
+* **Server and runtime.** `laya-serve` drains its inference pool on shutdown and returns 401 for a malformed bearer header, and `ONNXAgent` matches `Agent` on empty question sets and long conversation lists.
+
+---
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/NandhaKishorM/laya/main/assets/laya_vs_jev_full.png" alt="Laya versus TypeSafe Jev: accuracy, every application workflow, all 51 languages, speed, calibration and routing cost" width="100%" />
 </p>
@@ -21,15 +42,6 @@ tags: [laya, system-one, calibrated-decisions, rlcd, classification, routing, sc
 | [`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual) | mmBERT-base | 322M | 1024 (up to 8k) | 100+ languages, ~2.2x faster |
 | [`convaiinnovations/laya-typed-decisions`](https://huggingface.co/convaiinnovations/laya-typed-decisions) | ModernBERT-large | 421M | 1024 | the four typed-decisions workflows (0.766 acc) |
 
-## What's new in laya 0.3.14
-
-`pip install -U laya`. The checkpoints themselves are unchanged. Full documentation: [nandhakishorm.github.io/laya](https://nandhakishorm.github.io/laya/).
-
-* **Documentation site** with guides for hooks, schema-driven decisions, Docker and LangChain, plus an API reference generated from the docstrings.
-* **Sturdier fast path.** After a CUDA out-of-memory error the fallback to CPU switches the TileLang fast path off first, a single-option `choice` no longer crashes it, and concurrent calls can no longer overwrite each other's CUDA-graph buffers.
-* **Server and runtime.** `laya-serve` drains its inference pool on shutdown and returns 401 for a malformed bearer header, and `ONNXAgent` matches `Agent` on empty question sets and long conversation lists.
-
----
 
 ## Quickstart: Route Mode (Recommended)
 
